@@ -1,0 +1,81 @@
+buildpacks:
+  - name: nodejs-buildpack
+    version: 1.7.70
+    stack: cflinuxfs3
+    official: yes
+    type: tar
+    offline: yes
+    skip: yes
+    build:
+      type: packager
+  - name: dotnet-core-buildpack
+    version: 2.3.42
+    stack: cflinuxfs3
+    official: yes
+    type: tar
+    offline: yes
+    skip: yes
+    build:
+      type: packager
+  - name: go-buildpack
+    version: 1.9.46
+    stack: cflinuxfs3
+    official: yes
+    type: tar
+    offline: yes
+    build:
+      type: packager
+  - name: nginx-buildpack
+    version: 1.1.38
+    stack: cflinuxfs3
+    official: yes
+    type: tar
+    offline: yes
+    skip: yes
+    build:
+      type: packager
+  - name: hwc-buildpack
+    version: 3.1.24
+    stack: windows
+    official: no
+    skip: yes
+    tar:
+      url: https://github.com/cloudfoundry/hwc-buildpack/archive/refs/tags/v3.1.24.tar.gz
+    type: tar
+    offline: yes
+    build:
+      type: packager
+  - name: java-buildpack
+    version: 4.49
+    stack: cflinuxfs3
+    official: yes
+    type: tar
+    offline: yes
+    build:
+      type: packager
+  - name: staticfile-buildpack
+    version: 1.5.30
+    stack: cflinuxfs3
+    official: yes
+    type: tar
+    offline: yes
+    build:
+      type: packager
+  - name: python-buildpack
+    version: 1.7.54
+    stack: cflinuxfs3
+    official: yes
+    type: tar
+    offline: yes
+    skip: yes
+    build:
+      type: packager
+  - name: r-buildpack
+    version: 1.1.29
+    stack: cflinuxfs3
+    official: yes
+    type: tar
+    offline: yes
+    skip: yes
+    build:
+      type: packager
