@@ -6,14 +6,14 @@ import (
 )
 
 type Manager struct {
-	BuildPacks *BuildPacks
+	BuildPacksConfig *BuildPacksConfig
 }
 
 var wg sync.WaitGroup
 
 func (bpm *Manager) Load(filename string) error {
-	bpm.BuildPacks = &BuildPacks{}
-	err := bpm.BuildPacks.loadBuildpackData(filename)
+	bpm.BuildPacksConfig = &BuildPacksConfig{}
+	err := bpm.BuildPacksConfig.loadBuildpackData(filename)
 	if err != nil {
 		return err
 	}
@@ -22,11 +22,15 @@ func (bpm *Manager) Load(filename string) error {
 }
 
 func (bpm *Manager) Process() error {
-	for _, b := range bpm.BuildPacks.BuildPack {
+	for _, b := range bpm.BuildPacksConfig.BuildPacks {
 		wg.Add(1)
 		go func(b BuildPack) {
-			log.Printf("[%s] Starting...", b.Name)
 			defer wg.Done()
+			if b.Skip {
+				log.Printf("[%s] Skipping...", b.Name)
+				return
+			}
+			log.Printf("[%s] Starting...", b.Name)
 			err := b.CreateBuildPackDirectory()
 			if err != nil {
 				log.Println(err)

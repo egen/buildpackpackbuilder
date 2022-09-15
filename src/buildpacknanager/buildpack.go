@@ -152,6 +152,18 @@ func (buildpack *BuildPack) downloadTarFile(url string) (string, error) {
 }
 
 func (buildpack *BuildPack) BuildBuildPack() error {
+
+	switch buildtype := buildpack.Build.Type; buildtype {
+	case "packager":
+		return buildpack.RunBuildPackPackager()
+	case "custom":
+		return buildpack.RunCustomPackager()
+	case "java":
+		return buildpack.RunJavaBuildPackPackager()
+	default:
+		return buildpack.RunBuildPackPackager()
+	}
+
 	if buildpack.Build.Type == "packager" {
 		return buildpack.RunBuildPackPackager()
 	} else if buildpack.Build.Type == "custom" {
@@ -166,7 +178,39 @@ func (buildpack *BuildPack) RunBuildPackPackager() error {
 		log.Printf("[%s] Started building buildpack...", buildpack.Name)
 		cmd := exec.Command("buildpack-packager", "build", "-stack", buildpack.Stack, "--cached", fmt.Sprintf("%t", buildpack.Offline))
 		cmd.Dir = buildpack.VersionFolderPath
+		if DEBUG_MODE {
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+		}
 		err := cmd.Run()
+		if err != nil {
+			return err
+		}
+		log.Printf("[%s] Completed building buildpack!", buildpack.Name)
+	}
+	return nil
+}
+
+func (buildpack *BuildPack) RunJavaBuildPackPackager() error {
+	if _, err := os.Stat(buildpack.VersionFolderPath); !os.IsNotExist(err) {
+		log.Printf("[%s] Started building Java buildpack...", buildpack.Name)
+		cmd1 := exec.Command("bundle", "install")
+		if DEBUG_MODE {
+			cmd1.Stdout = os.Stdout
+			cmd1.Stderr = os.Stderr
+		}
+		cmd1.Dir = buildpack.VersionFolderPath
+		err := cmd1.Run()
+		if err != nil {
+			return err
+		}
+		cmd2 := exec.Command("bundle", "exec", "rake", "clean", "package", fmt.Sprintf("OFFLINE=%t", buildpack.Offline))
+		if DEBUG_MODE {
+			cmd2.Stdout = os.Stdout
+			cmd2.Stderr = os.Stderr
+		}
+		cmd2.Dir = buildpack.VersionFolderPath
+		err = cmd2.Run()
 		if err != nil {
 			return err
 		}

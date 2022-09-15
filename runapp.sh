@@ -1,2 +1,2 @@
 #!/bin/bash
-/app/buildpackpackbuilder /build/$1
+/app/buildpackpackbuilder /$1

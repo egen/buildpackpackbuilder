@@ -23,6 +23,7 @@ buildpacks:
     official: yes
     type: tar
     offline: yes
+    skip: yes
     build:
       type: packager
   - name: nginx-buildpack
@@ -59,6 +60,7 @@ buildpacks:
     official: yes
     type: tar
     offline: yes
+    skip: yes
     build:
       type: packager
   - name: python-buildpack
@@ -79,3 +81,13 @@ buildpacks:
     skip: yes
     build:
       type: packager
+  - name: java-buildpack
+    version: 4.49
+    stack: cflinuxfs3
+    official: yes
+    type: tar
+    offline: yes
+    skip: no
+    build:
+      type: java
+debug: yes
