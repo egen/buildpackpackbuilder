@@ -91,13 +91,22 @@ buildpacks:
     skip: yes
     build:
       type: packager
+  - name: binary-buildpack
+    version: 1.0.45
+    stack: windows
+    official: yes
+    type: tar
+    offline: yes
+    skip: no
+    build:
+      type: packager
   - name: php-buildpack
     version: 4.4.61
     stack: cflinuxfs3
     official: yes
     type: tar
     offline: yes
-    skip: no
+    skip: yes
     build:
       type: oldpackager
   - name: ruby-buildpack
