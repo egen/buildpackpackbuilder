@@ -46,14 +46,6 @@ buildpacks:
     offline: yes
     build:
       type: packager
-  - name: java-buildpack
-    version: 4.49
-    stack: cflinuxfs3
-    official: yes
-    type: tar
-    offline: yes
-    build:
-      type: packager
   - name: staticfile-buildpack
     version: 1.5.30
     stack: cflinuxfs3
@@ -87,7 +79,34 @@ buildpacks:
     official: yes
     type: tar
     offline: yes
-    skip: no
+    skip: yes
     build:
       type: java
+  - name: binary-buildpack
+    version: 1.0.45
+    stack: cflinuxfs3
+    official: yes
+    type: tar
+    offline: yes
+    skip: yes
+    build:
+      type: packager
+  - name: php-buildpack
+    version: 4.4.61
+    stack: cflinuxfs3
+    official: yes
+    type: tar
+    offline: yes
+    skip: no
+    build:
+      type: oldpackager
+  - name: ruby-buildpack
+    version: 1.8.54
+    stack: cflinuxfs3
+    official: yes
+    type: tar
+    offline: yes
+    skip: yes
+    build:
+      type: packager
 debug: yes

@@ -47,6 +47,12 @@ func (bpm *Manager) Process() error {
 				log.Println(err)
 				return
 			}
+
+			err = b.MoveArtifactToOutputDirectory()
+			if err != nil {
+				log.Println(err)
+				return
+			}
 		}(b)
 
 	}
