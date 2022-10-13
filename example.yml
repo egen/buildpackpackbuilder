@@ -97,16 +97,16 @@ buildpacks:
     official: yes
     type: tar
     offline: yes
-    skip: no
+    skip: yes
     build:
       type: packager
   - name: php-buildpack
     version: 4.4.61
     stack: cflinuxfs3
     official: yes
-    type: tar
+    type: git
     offline: yes
-    skip: yes
+    skip: no
     build:
       type: oldpackager
   - name: ruby-buildpack

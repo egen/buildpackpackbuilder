@@ -43,9 +43,11 @@ type BuildPack struct {
 	FullFolderPath    string
 	OutputPath        string
 	VersionFolderPath string
+	BuildFolderPath   string
 }
 
 var GITHUB_FORMAT string = "https://github.com/cloudfoundry/%s/archive/refs/tags/%s"
+var GITHUB_GIT_FORMAT string = "https://github.com/cloudfoundry/%s.git"
 var GITHUB_TAR string = "v%s.tar.gz"
 var WD_OUTPUT string = ""
 
@@ -68,7 +70,8 @@ func (buildpack *BuildPack) CreateBuildPackDirectory() error {
 
 	buildpack.FullFolderPath = filepath.Join(workdir, buildpack.Name)
 	buildpack.VersionFolderPath = filepath.Join(buildpack.FullFolderPath, fmt.Sprintf("%s-%s", buildpack.Name, buildpack.Version))
-	buildpack.OutputPath = path.Join(buildpack.VersionFolderPath)
+	buildpack.BuildFolderPath = buildpack.VersionFolderPath
+	buildpack.OutputPath = buildpack.BuildFolderPath
 
 	if _, err := os.Stat(buildpack.FullFolderPath); os.IsNotExist(err) {
 		err = os.Mkdir(buildpack.FullFolderPath, os.ModeDir)
@@ -122,6 +125,36 @@ func (buildpack *BuildPack) downloadOfficialGithubFile() (string, error) {
 	log.Printf("[%s] File: %s Downloaded Size %d", buildpack.Name, filename, size)
 
 	return downloadfile, nil
+}
+
+func (buildpack *BuildPack) downloadOfficialGitHubRepository() error {
+
+	buildpack.BuildFolderPath = path.Join(buildpack.BuildFolderPath, buildpack.Name)
+	buildpack.OutputPath = buildpack.BuildFolderPath
+
+	if _, err := os.Stat(buildpack.VersionFolderPath); os.IsNotExist(err) {
+		err = os.Mkdir(buildpack.VersionFolderPath, os.ModeDir)
+		if err != nil {
+			return err
+		}
+
+		log.Printf("Created Directory %s", buildpack.VersionFolderPath)
+	}
+
+	log.Printf("[%s] Cloning Repo", buildpack.Name)
+	err := buildpack.runCommand("git", []string{"clone", "--depth=1", "--branch", fmt.Sprintf("v%s", buildpack.Version), fmt.Sprintf(GITHUB_GIT_FORMAT, buildpack.Name)}, buildpack.VersionFolderPath, nil)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("[%s] Getting submodules", buildpack.Name)
+	err = buildpack.runCommand("git", []string{"submodule", "update", "--init"}, buildpack.BuildFolderPath, nil)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("[%s] Checking out version: Clone successful", buildpack.Name)
+	return nil
 }
 
 func (buildpack *BuildPack) downloadTarFile(url string) (string, error) {
@@ -220,10 +253,10 @@ func (buildpack *BuildPack) MoveArtifactToOutputDirectory() error {
 }
 
 func (buildpack *BuildPack) RunBuildPackPackager() error {
-	if _, err := os.Stat(buildpack.VersionFolderPath); !os.IsNotExist(err) {
+	if _, err := os.Stat(buildpack.BuildFolderPath); !os.IsNotExist(err) {
 		log.Printf("[%s] Started building buildpack...", buildpack.Name)
 
-		err = buildpack.runCommand("buildpack-packager", []string{"build", "-stack", buildpack.Stack, "--cached", fmt.Sprintf("%t", buildpack.Offline)}, buildpack.VersionFolderPath, nil)
+		err = buildpack.runCommand("buildpack-packager", []string{"build", "-stack", buildpack.Stack, "--cached", fmt.Sprintf("%t", buildpack.Offline)}, buildpack.BuildFolderPath, nil)
 		if err != nil {
 			return err
 		}
@@ -250,7 +283,9 @@ func (buildpack *BuildPack) RunOldBuildPackPackager() error {
 			cached = "--uncached"
 		}
 
-		err = buildpack.runCommand("bundle", []string{"exec", "buildpack-packager", cached, fmt.Sprintf("--stack=%s", buildpack.Stack)}, buildpack.VersionFolderPath, []string{"BUNDLE_GEMFILE=cf.GemFile"})
+		log.Printf("[%s] Building package...", buildpack.Name)
+
+		err = buildpack.runCommand("bundle", []string{"exec", "buildpack-packager", cached, fmt.Sprintf("--stack=%s", buildpack.Stack)}, buildpack.BuildFolderPath, []string{"BUNDLE_GEMFILE=cf.GemFile"})
 		if err != nil {
 			return err
 		}
@@ -269,7 +304,7 @@ func (buildpack *BuildPack) RunJavaBuildPackPackager() error {
 			return err
 		}
 
-		err := buildpack.runCommand("bundle", []string{"exec", "rake", "clean", "package", fmt.Sprintf("OFFLINE=%t", buildpack.Offline)}, buildpack.VersionFolderPath, nil)
+		err := buildpack.runCommand("bundle", []string{"exec", "rake", "clean", "package", fmt.Sprintf("OFFLINE=%t", buildpack.Offline)}, buildpack.BuildFolderPath, nil)
 		if err != nil {
 			return err
 		}
@@ -282,7 +317,7 @@ func (buildpack *BuildPack) RunJavaBuildPackPackager() error {
 
 func (buildpack *BuildPack) runCommand_Ruby_Bundle_Install() error {
 
-	err := buildpack.runCommand("bundle", []string{"install"}, buildpack.VersionFolderPath, []string{"BUNDLE_GEMFILE=cf.GemFile"})
+	err := buildpack.runCommand("bundle", []string{"install"}, buildpack.BuildFolderPath, []string{"BUNDLE_GEMFILE=cf.GemFile"})
 	if err != nil {
 		return err
 	}
@@ -307,10 +342,10 @@ func (buildpack *BuildPack) runCommand(command string, args []string, workingdir
 }
 
 func (buildpack *BuildPack) RunCustomPackager() error {
-	if _, err := os.Stat(buildpack.VersionFolderPath); !os.IsNotExist(err) {
+	if _, err := os.Stat(buildpack.BuildFolderPath); !os.IsNotExist(err) {
 		log.Printf("[%s] Started building buildpack using CUSTOM...", buildpack.Name)
 		cmd := exec.Command(buildpack.Build.Exec.Cmd, buildpack.Build.Exec.Args...)
-		cmd.Dir = buildpack.VersionFolderPath
+		cmd.Dir = buildpack.BuildFolderPath
 		cmd.Stderr = os.Stdout
 		cmd.Stdout = os.Stdout
 		err := cmd.Run()
@@ -339,14 +374,25 @@ func (buildpack *BuildPack) ExpandTarResources(filename string) error {
 
 func (buildpack *BuildPack) GetResource() error {
 	if buildpack.Official {
-		filename, err := buildpack.downloadOfficialGithubFile()
-		if err != nil {
-			return err
+
+		if buildpack.Type == "tar" {
+			filename, err := buildpack.downloadOfficialGithubFile()
+			if err != nil {
+				return err
+			}
+			err = buildpack.ExpandTarResources(filename)
+			if err != nil {
+				return err
+			}
+		} else if buildpack.Type == "git" {
+			err := buildpack.downloadOfficialGitHubRepository()
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("Invalid buildpack download type specified")
 		}
-		err = buildpack.ExpandTarResources(filename)
-		if err != nil {
-			return err
-		}
+
 	} else {
 		if buildpack.Type == "tar" {
 			if buildpack.TarLocation.URL == "" {
