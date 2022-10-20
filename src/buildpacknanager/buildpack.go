@@ -278,9 +278,9 @@ func (buildpack *BuildPack) RunOldBuildPackPackager() error {
 
 		log.Printf("[%s] Installed Bundle...", buildpack.Name)
 
-		cached := "--cached"
+		cached := "--uncached"
 		if buildpack.Offline {
-			cached = "--uncached"
+			cached = "--cached"
 		}
 
 		log.Printf("[%s] Building package...", buildpack.Name)
